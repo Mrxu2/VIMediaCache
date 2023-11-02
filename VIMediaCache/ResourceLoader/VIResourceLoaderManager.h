@@ -40,4 +40,6 @@
 + (NSURL *)assetURLWithURL:(NSURL *)url;
 - (AVPlayerItem *)playerItemWithURL:(NSURL *)url;
 
+- (AVURLAsset *)URLAssetWithURL:(NSURL *)url;
+- (AVPlayerItem *)playerItemWithURLAsset:(AVURLAsset *)urlAsset;
 @end

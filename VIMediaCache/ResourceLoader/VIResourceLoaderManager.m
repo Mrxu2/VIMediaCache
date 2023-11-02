@@ -9,7 +9,7 @@
 #import "VIResourceLoaderManager.h"
 #import "VIResourceLoader.h"
 
-static NSString *kCacheScheme = @"VIMediaCache:";
+static NSString *kCacheScheme = @"NZGOMediaCache:";
 
 @interface VIResourceLoaderManager () <VIResourceLoaderDelegate>
 
@@ -107,6 +107,21 @@ static NSString *kCacheScheme = @"VIMediaCache:";
 - (AVPlayerItem *)playerItemWithURL:(NSURL *)url {
     NSURL *assetURL = [VIResourceLoaderManager assetURLWithURL:url];
     AVURLAsset *urlAsset = [AVURLAsset URLAssetWithURL:assetURL options:nil];
+    [urlAsset.resourceLoader setDelegate:self queue:dispatch_get_main_queue()];
+    AVPlayerItem *playerItem = [AVPlayerItem playerItemWithAsset:urlAsset];
+    if ([playerItem respondsToSelector:@selector(setCanUseNetworkResourcesForLiveStreamingWhilePaused:)]) {
+        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = YES;
+    }
+    return playerItem;
+}
+
+- (AVURLAsset *)URLAssetWithURL:(NSURL *)url {
+    NSURL *assetURL = [VIResourceLoaderManager assetURLWithURL:url];
+    AVURLAsset *urlAsset = [AVURLAsset URLAssetWithURL:assetURL options:nil];
+    return urlAsset;
+}
+
+- (AVPlayerItem *)playerItemWithURLAsset:(AVURLAsset *)urlAsset {
     [urlAsset.resourceLoader setDelegate:self queue:dispatch_get_main_queue()];
     AVPlayerItem *playerItem = [AVPlayerItem playerItemWithAsset:urlAsset];
     if ([playerItem respondsToSelector:@selector(setCanUseNetworkResourcesForLiveStreamingWhilePaused:)]) {
