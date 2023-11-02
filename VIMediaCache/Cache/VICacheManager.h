@@ -44,6 +44,8 @@ extern NSString *VICacheFinishedErrorKey;
 + (unsigned long long)calculateCachedSizeWithError:(NSError **)error;
 + (void)cleanAllCacheWithError:(NSError **)error;
 + (void)cleanCacheForURL:(NSURL *)url error:(NSError **)error;
+/// xyh 增量清理 - 超出阀值maxCache 则根据最后访问时间依次清理内存.
++ (void)cleanCacheWithMaxCache:(unsigned long long)maxCache Error:(NSError **)error;
 
 
 /**

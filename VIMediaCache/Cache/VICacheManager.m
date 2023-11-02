@@ -30,6 +30,16 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
     });
 }
 
+
++ (dispatch_queue_t)cacheCleanupQueue {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        queue = dispatch_queue_create("com.XYH_NZGO.cacheCleanupQueue", DISPATCH_QUEUE_SERIAL);
+    });
+    return queue;
+}
+
 + (void)setCacheDirectory:(NSString *)cacheDirectory {
     kMCMediaCacheDirectory = cacheDirectory;
 }
@@ -139,6 +149,93 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
             return;
         }
     }
+}
+
+
++ (void)cleanCacheWithMaxCache:(unsigned long long)maxCache Error:(NSError **)error {
+    // 使用串行队列来处理清理请求
+    dispatch_queue_t cleanupQueue = [self cacheCleanupQueue];
+    
+    dispatch_async(cleanupQueue, ^{
+
+    // 获取文件夹大小
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *cacheDirectory = [self cacheDirectory];
+
+    NSError *attributesError = nil;
+    NSDictionary *cacheAttributes = [fileManager attributesOfItemAtPath:cacheDirectory error:&attributesError];
+
+    if (attributesError) {
+        // 处理获取属性时的错误
+        if (error) {
+            *error = attributesError;
+        }
+        return;
+    }
+
+    NSNumber *fileSizeNumber = cacheAttributes[NSFileSize];
+
+    if (fileSizeNumber) {
+        unsigned long long totalSize = [fileSizeNumber unsignedLongLongValue];
+
+        if (totalSize > maxCache) {
+            // Find downloading file
+            NSMutableSet *downloadingFiles = [NSMutableSet set];
+            [[[VIMediaDownloaderStatus shared] urls] enumerateObjectsUsingBlock:^(NSURL * _Nonnull obj, BOOL * _Nonnull stop) {
+                NSString *file = [self cachedFilePathForURL:obj];
+                [downloadingFiles addObject:file];
+                NSString *configurationPath = [VICacheConfiguration configurationFilePathForFilePath:file];
+                [downloadingFiles addObject:configurationPath];
+            }];
+
+            // Remove files
+            NSArray *files = [fileManager contentsOfDirectoryAtPath:cacheDirectory error:error];
+
+            if (files) {
+                NSArray *sortedFiles = [files sortedArrayUsingComparator:^NSComparisonResult(NSString *file1, NSString *file2) {
+                    NSString *filePath1 = [cacheDirectory stringByAppendingPathComponent:file1];
+                    NSString *filePath2 = [cacheDirectory stringByAppendingPathComponent:file2];
+
+                    if ([downloadingFiles containsObject:filePath1]) {
+                        return NSOrderedDescending;
+                    } else if ([downloadingFiles containsObject:filePath2]) {
+                        return NSOrderedAscending;
+                    } else {
+                        // 根据最后的访问时间
+                        NSDate *lastAccessDate1 = [fileManager attributesOfItemAtPath:filePath1 error:nil][NSFileModificationDate];
+                        NSDate *lastAccessDate2 = [fileManager attributesOfItemAtPath:filePath2 error:nil][NSFileModificationDate];
+                        return [lastAccessDate1 compare:lastAccessDate2];
+
+                    }
+                }];
+
+                for (NSString *fileName in sortedFiles) {
+                    NSString *filePath = [cacheDirectory stringByAppendingPathComponent:fileName];
+
+                    if (![downloadingFiles containsObject:filePath]) {
+                        // 查询删除文件的大小
+                        NSDictionary<NSFileAttributeKey, id> *attribute = [fileManager attributesOfItemAtPath:filePath error:error];
+                        unsigned long long attributeSize = attribute ? [attribute fileSize] : -1;
+                        // 删除文件并检查删除结果
+                        NSError *deleteError = nil;
+                        if ([fileManager removeItemAtPath:filePath error:&deleteError]) {
+                            totalSize -= attributeSize;
+                            if (totalSize <= maxCache) {
+                                break; // 停止删除文件，因为缓存大小已经在阈值内
+                            }
+                        } else {
+                            // 处理删除文件时的错误
+                            if (error) {
+                                *error = deleteError;
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+    });
 }
 
 + (BOOL)addCacheFile:(NSString *)filePath forURL:(NSURL *)url error:(NSError **)error {
