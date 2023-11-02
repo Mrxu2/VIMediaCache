@@ -125,6 +125,7 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
     }
 }
 
+
 + (void)cleanCacheForURL:(NSURL *)url error:(NSError **)error {
     if ([[VIMediaDownloaderStatus shared] containsURL:url]) {
         NSString *description = [NSString stringWithFormat:NSLocalizedString(@"Clean cache for url `%@` can't be done, because it's downloading", nil), url];
@@ -157,26 +158,7 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
     dispatch_queue_t cleanupQueue = [self cacheCleanupQueue];
     
     dispatch_async(cleanupQueue, ^{
-
-    // 获取文件夹大小
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString *cacheDirectory = [self cacheDirectory];
-
-    NSError *attributesError = nil;
-    NSDictionary *cacheAttributes = [fileManager attributesOfItemAtPath:cacheDirectory error:&attributesError];
-
-    if (attributesError) {
-        // 处理获取属性时的错误
-        if (error) {
-            *error = attributesError;
-        }
-        return;
-    }
-
-    NSNumber *fileSizeNumber = cacheAttributes[NSFileSize];
-
-    if (fileSizeNumber) {
-        unsigned long long totalSize = [fileSizeNumber unsignedLongLongValue];
+    unsigned long long totalSize = [self calculateCachedSizeWithError:error];
 
         if (totalSize > maxCache) {
             // Find downloading file
@@ -189,8 +171,9 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
             }];
 
             // Remove files
+            NSFileManager *fileManager = [NSFileManager defaultManager];
+            NSString *cacheDirectory = [self cacheDirectory];
             NSArray *files = [fileManager contentsOfDirectoryAtPath:cacheDirectory error:error];
-
             if (files) {
                 NSArray *sortedFiles = [files sortedArrayUsingComparator:^NSComparisonResult(NSString *file1, NSString *file2) {
                     NSString *filePath1 = [cacheDirectory stringByAppendingPathComponent:file1];
@@ -232,7 +215,7 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
 
                     }
                 }
-            }
+           
         }
     }
     });
