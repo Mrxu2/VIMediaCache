@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
     s.homepage = 'https://github.com/Mrxu2/VIMediaCache'
     s.author = { 'Vito' => '13779928250@163.com' }
     s.source = { :git => 'https://github.com/Mrxu2/VIMediaCache.git', :tag => s.version.to_s }
-    s.platform = :ios, '12.0'
+    s.platform = :ios, '8.0'
     s.source_files = 'VIMediaCache/*.{h,m}', 'VIMediaCache/**/*.{h,m}'
     s.frameworks = 'MobileCoreServices', 'AVFoundation'
     s.requires_arc = true
