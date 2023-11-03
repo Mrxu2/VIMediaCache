@@ -140,14 +140,14 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
     
     if ([fileManager fileExistsAtPath:filePath]) {
         if (![fileManager removeItemAtPath:filePath error:error]) {
-            return;
+//            return;
         }
     }
     
     NSString *configurationPath = [VICacheConfiguration configurationFilePathForFilePath:filePath];
     if ([fileManager fileExistsAtPath:configurationPath]) {
         if (![fileManager removeItemAtPath:configurationPath error:error]) {
-            return;
+//            return;
         }
     }
 }
@@ -196,30 +196,36 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
                     NSString *filePath = [cacheDirectory stringByAppendingPathComponent:fileName];
                             
                     if (![downloadingFiles containsObject:filePath]) {
-                        if ([fileName rangeOfString:@".mt_cfg"].location != NSNotFound) {
-                            /// 跳过mt_cfg文件
-                            continue;
-                        }
-                        // 查询删除文件的大小
-                        NSDictionary<NSFileAttributeKey, id> *attribute = [fileManager attributesOfItemAtPath:filePath error:error];
-                        unsigned long long attributeSize = attribute ? [attribute fileSize] : -1;
+                        
+                        unsigned long long attributeSize = 0;
                         // 删除文件并检查删除结果
                         NSError *deleteError = nil;
-                        if ([fileManager removeItemAtPath:filePath error:&deleteError]) {
-                            NSString *configurationPath = [VICacheConfiguration configurationFilePathForFilePath:filePath];
-                            //删除对应的.mt_cfg"文件
-                            [fileManager removeItemAtPath:configurationPath error:&deleteError];
-                            totalSize -= attributeSize;
-                            if (totalSize <= maxCache) {
-                                break; // 停止删除文件，因为缓存大小已经在阈值内
+                        
+                        if ([fileManager fileExistsAtPath:filePath]) {
+                            NSDictionary<NSFileAttributeKey, id> *attribute = [fileManager attributesOfItemAtPath:filePath error:error];
+                            if ([fileManager removeItemAtPath:filePath error:error]) {
+                                attributeSize += attribute ? [attribute fileSize] : -1;
                             }
-                        } else {
-                            // 处理删除文件时的错误
-                            if (error) {
-                                *error = deleteError;
+                        }
+                        
+                        NSString *configurationPath = filePath;
+                        if ([fileName rangeOfString:@".mt_cfg"].location != NSNotFound) {
+                            configurationPath = [configurationPath componentsSeparatedByString:@".mt_cfg"][0];
+                        }else{
+                            configurationPath = [VICacheConfiguration configurationFilePathForFilePath:filePath];
+                        }
+                        
+                        if ([fileManager fileExistsAtPath:configurationPath]) {
+                            NSDictionary<NSFileAttributeKey, id> *attribute = [fileManager attributesOfItemAtPath:configurationPath error:error];
+                            if ([fileManager removeItemAtPath:configurationPath error:error]) {
+                                attributeSize += attribute ? [attribute fileSize] : -1;
                             }
                         }
 
+                        totalSize -= attributeSize;
+                        if (totalSize <= maxCache) {
+                            break; // 停止删除文件，因为缓存大小已经在阈值内
+                        }
                     }
                 }
            
