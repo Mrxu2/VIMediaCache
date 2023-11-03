@@ -187,21 +187,28 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
                         // 根据最后的访问时间
                         NSDate *lastAccessDate1 = [fileManager attributesOfItemAtPath:filePath1 error:nil][NSFileModificationDate];
                         NSDate *lastAccessDate2 = [fileManager attributesOfItemAtPath:filePath2 error:nil][NSFileModificationDate];
-                        return [lastAccessDate1 compare:lastAccessDate2];
+                        return [lastAccessDate2 compare:lastAccessDate1];
 
                     }
                 }];
 
                 for (NSString *fileName in sortedFiles) {
                     NSString *filePath = [cacheDirectory stringByAppendingPathComponent:fileName];
-
+                            
                     if (![downloadingFiles containsObject:filePath]) {
+                        if ([fileName rangeOfString:@".mt_cfg"].location != NSNotFound) {
+                            /// 跳过mt_cfg文件
+                            continue;
+                        }
                         // 查询删除文件的大小
                         NSDictionary<NSFileAttributeKey, id> *attribute = [fileManager attributesOfItemAtPath:filePath error:error];
                         unsigned long long attributeSize = attribute ? [attribute fileSize] : -1;
                         // 删除文件并检查删除结果
                         NSError *deleteError = nil;
                         if ([fileManager removeItemAtPath:filePath error:&deleteError]) {
+                            NSString *configurationPath = [VICacheConfiguration configurationFilePathForFilePath:filePath];
+                            //删除对应的.mt_cfg"文件
+                            [fileManager removeItemAtPath:configurationPath error:&deleteError];
                             totalSize -= attributeSize;
                             if (totalSize <= maxCache) {
                                 break; // 停止删除文件，因为缓存大小已经在阈值内
