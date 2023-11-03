@@ -216,7 +216,7 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
                         // 根据最后的访问时间
                         NSDate *lastAccessDate1 = [fileManager attributesOfItemAtPath:filePath1 error:nil][NSFileModificationDate];
                         NSDate *lastAccessDate2 = [fileManager attributesOfItemAtPath:filePath2 error:nil][NSFileModificationDate];
-                        return [lastAccessDate2 compare:lastAccessDate1];
+                        return [lastAccessDate1 compare:lastAccessDate2];
 
                     }
                 }];
