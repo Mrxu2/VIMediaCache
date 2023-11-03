@@ -152,6 +152,35 @@ static NSString *(^kMCFileNameRules)(NSURL *url);
     }
 }
 
+/// 删除错误的缓存文件
++ (void)cleanErrorCachedWithError:(NSError **)error {
+    dispatch_queue_t cleanupQueue = [self cacheCleanupQueue];
+    dispatch_async(cleanupQueue, ^{
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *cacheDirectory = [self cacheDirectory];
+    NSArray *files = [fileManager contentsOfDirectoryAtPath:cacheDirectory error:error];
+    if (files) {
+            for (NSString *path in files) {
+                NSString *filePath = [cacheDirectory stringByAppendingPathComponent:path];
+                
+                NSString *configurationPath = filePath;
+                if ([filePath rangeOfString:@".mt_cfg"].location != NSNotFound) {
+                    configurationPath = [configurationPath componentsSeparatedByString:@".mt_cfg"][0];
+                }else{
+                    configurationPath = [VICacheConfiguration configurationFilePathForFilePath:filePath];
+                }
+                BOOL isFilePath = [fileManager fileExistsAtPath:filePath];
+                BOOL isConfigurationPath = [fileManager fileExistsAtPath:configurationPath];
+                if (isFilePath == NO || isConfigurationPath == NO) {
+                    [fileManager removeItemAtPath:filePath error:error];
+                    [fileManager removeItemAtPath:configurationPath error:error];
+                }
+            }
+    }
+    });
+
+}
 
 + (void)cleanCacheWithMaxCache:(unsigned long long)maxCache Error:(NSError **)error {
     // 使用串行队列来处理清理请求

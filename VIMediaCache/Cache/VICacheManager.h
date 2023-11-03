@@ -46,7 +46,8 @@ extern NSString *VICacheFinishedErrorKey;
 + (void)cleanCacheForURL:(NSURL *)url error:(NSError **)error;
 /// xyh 增量清理 - 超出阀值maxCache 则根据最后访问时间依次清理内存.
 + (void)cleanCacheWithMaxCache:(unsigned long long)maxCache Error:(NSError **)error;
-
+/// 删除错误的缓存文件
++ (void)cleanErrorCachedWithError:(NSError **)error;
 
 /**
  Useful when you upload a local file to the server
